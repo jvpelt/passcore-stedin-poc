@@ -2,7 +2,7 @@ import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Params } from '@angular/router';
 import { Alerts } from '../models/alerts.model';
 import { ChangePasswordForm } from '../models/change-password-form.model';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { DialogOverview } from '../dialog/app.dialog';
 import { HttpClient } from '@angular/common/http';
 import { MatDialog, MatSnackBar } from '@angular/material';
@@ -14,6 +14,7 @@ import { Title } from '@angular/platform-browser';
 import { ViewOptions } from '../models/view-options.model';
 import { ErrorsPasswordForm } from '../models/errors-password-form.model';
 import { ValidationRegex } from '../models/validation-regex.model';
+import { MsalService, BroadcastService } from '@azure/msal-angular'
 
 @Component({
     selector: 'app-root',
@@ -22,10 +23,11 @@ import { ValidationRegex } from '../models/validation-regex.model';
     providers: [ChangePasswordComponent],
     viewProviders: [ViewOptions]
 })
-export class ChangePasswordComponent implements OnInit {
-
+export class ChangePasswordComponent implements OnInit, OnDestroy {
     // Constructor: parent "this" doesn't work here
     constructor(
+		private msalService: MsalService,
+		private broadcastService: BroadcastService,
         private http: HttpClient,
         private snackBar: MatSnackBar,
         private titleService: Title,
@@ -51,22 +53,41 @@ export class ChangePasswordComponent implements OnInit {
 
     // Angular "OnInit": happens only on first page load
     ngOnInit() {
-        this.FormData = new PasswordModel;
+		this.FormData = new PasswordModel;
         this.ViewOptions = new ViewOptions;
         this.ViewOptions.alerts = new Alerts;
         this.ViewOptions.recaptcha = new Recaptcha;
         this.ViewOptions.changePasswordForm = new ChangePasswordForm;
         this.ViewOptions.errorsPasswordForm = new ErrorsPasswordForm;
-        this.ViewOptions.validationRegex = new ValidationRegex();
-        this.r.queryParams.subscribe((params: Params) => {
-            const userId = params['userName'] || '';
-            this.GetData(userId);
-        });
+		this.ViewOptions.validationRegex = new ValidationRegex();
+
+        // this.r.queryParams.subscribe((params: Params) => {
+        //     const userId = params['userName'] || '';
+        //     this.GetData(userId);
+        // });
         this.FormGroup.valueChanges.subscribe(data => {
             if (data.newPassword != null)
                 this.changeProgressBar(PasswordStrength.measureStrength(data.newPassword));
-        });
+		});
+
+		if(this.msalService.getUser()) {
+			console.log(this.msalService.getUser())
+			this.GetData(this.msalService.getUser().displayableId)
+		//   this.loggedIn = true;
+		} else {
+			this.msalService.loginRedirect(["user.read"])
+		//  this.loggedIn = false;
+	   }
     }
+
+	// login() {
+	// 	this.msalService.login();
+	// }
+	
+	// logout() {
+	// 	this.msalService.logout();
+	// }
+
 
     // Progress bar for password strength
     changeProgressBar(strength: number) {
@@ -186,5 +207,9 @@ export class ChangePasswordComponent implements OnInit {
                 this.clean('error');
             }
         );
-    }
+	}
+	
+	ngOnDestroy() {
+		this.broadcastService.getMSALSubject().next(1);
+	  }
 }

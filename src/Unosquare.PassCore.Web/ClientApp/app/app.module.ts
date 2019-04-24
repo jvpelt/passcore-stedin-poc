@@ -14,12 +14,14 @@ import { NgModule } from '@angular/core';
 import { RecaptchaModule, RECAPTCHA_LANGUAGE } from 'ng-recaptcha';
 import { RecaptchaFormsModule } from 'ng-recaptcha/forms';
 import { RouterModule } from '@angular/router';
-
+import { MsalModule } from '@azure/msal-angular'
+import appSettings from '../../appsettings.json'
+console.log(appSettings)
 @NgModule({
   bootstrap: [ChangePasswordComponent],
   declarations: [
     ChangePasswordComponent,
-    DialogOverview,
+    DialogOverview, 
     FooterComponent
   ],
   entryComponents: [DialogOverview],
@@ -36,7 +38,11 @@ import { RouterModule } from '@angular/router';
     RecaptchaModule.forRoot(),
     RecaptchaFormsModule,
     ReactiveFormsModule,
-    RouterModule
+	RouterModule,
+	[MsalModule.forRoot({
+		clientID: (<any>appSettings).msal.clientId,
+		authority: (<any>appSettings).msal.authority
+	})]
   ],
   exports: [ ],
   providers: [
